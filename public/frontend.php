@@ -196,27 +196,43 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 
 	if ( is_singular() ) {
 		if ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_POSTTYPE ] ) {
-			$dataLayer['pagePostType']  = get_post_type();
+			if ( is_single() ) {
+				$dataLayer["pagetype"] = 'post';
+			} else if ( is_page() ) {
+				$dataLayer["pagetype"] = 'site';
+			} else {
+				$dataLayer["pagetype"] = get_post_type();
+			}
+//			$dataLayer['pagePostType']  = get_post_type();
 			$dataLayer['pagePostType2'] = 'single-' . get_post_type();
 		}
 
 		if ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_CATEGORIES ] ) {
 			$_post_cats = get_the_category();
 			if ( $_post_cats ) {
-				$dataLayer['pageCategory'] = array();
-				foreach ( $_post_cats as $_one_cat ) {
-					$dataLayer['pageCategory'][] = $_one_cat->slug;
-				}
+				$dataLayer["category"] = $_post_cats[ count( $_post_cats ) - 1 ]->name;
+//				$dataLayer['pageCategory'] = array();
+//				foreach ( $_post_cats as $_one_cat ) {
+//					$dataLayer['pageCategory'][] = $_one_cat->slug;
+//				}
 			}
 		}
 
 		if ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_TAGS ] ) {
 			$_post_tags = get_the_tags();
 			if ( $_post_tags ) {
-				$dataLayer['pageAttributes'] = array();
-				foreach ( $_post_tags as $_one_tag ) {
-					$dataLayer['pageAttributes'][] = $_one_tag->slug;
+				if ( count( $_post_tags ) <= 1 ) {
+					$dataLayer["tags"] = $_post_tags[0]->name;
+				} else {
+					$dataLayer["tags"] = array();
+					foreach ( $_post_tags as $_one_tag ) {
+						$dataLayer["tags"][] = $_one_tag->name;
+					}
 				}
+//				$dataLayer['pageAttributes'] = array();
+//				foreach ( $_post_tags as $_one_tag ) {
+//					$dataLayer['pageAttributes'][] = $_one_tag->slug;
+//				}
 			}
 		}
 
@@ -235,6 +251,8 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 		}
 
 		if ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_POSTDATE ] ) {
+			$dataLayer["full_date"]         = get_the_date( "d-m-Y" );
+			$dataLayer["month_date"]        = get_the_date( "m-Y" );
 			$dataLayer['pagePostDate']      = get_the_date();
 			$dataLayer['pagePostDateYear']  = get_the_date( 'Y' );
 			$dataLayer['pagePostDateMonth'] = get_the_date( 'm' );
@@ -285,6 +303,8 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 				$dataLayer['pagePostType2'] = 'day-' . get_post_type();
 
 				if ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_POSTDATE ] ) {
+					$dataLayer["full_date"]         = get_the_date( "d-m-Y" );
+					$dataLayer["month_date"]        = get_the_date( "m-Y" );
 					$dataLayer['pagePostDate']      = get_the_date();
 					$dataLayer['pagePostDateYear']  = get_the_date( 'Y' );
 					$dataLayer['pagePostDateMonth'] = get_the_date( 'm' );
@@ -296,6 +316,8 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 				$dataLayer['pagePostType2'] = 'date-' . get_post_type();
 
 				if ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_POSTDATE ] ) {
+					$dataLayer["full_date"]         = get_the_date( "d-m-Y" );
+					$dataLayer["month_date"]        = get_the_date( "m-Y" );
 					$dataLayer['pagePostDate']      = get_the_date();
 					$dataLayer['pagePostDateYear']  = get_the_date( 'Y' );
 					$dataLayer['pagePostDateMonth'] = get_the_date( 'm' );
@@ -306,10 +328,11 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 
 		if ( ( is_tax() || is_category() ) && $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_CATEGORIES ] ) {
 			$_post_cats                = get_the_category();
-			$dataLayer['pageCategory'] = array();
-			foreach ( $_post_cats as $_one_cat ) {
-				$dataLayer['pageCategory'][] = $_one_cat->slug;
-			}
+			$dataLayer["category"] = $_post_cats[ count( $_post_cats ) - 1 ]->name;
+//			$dataLayer['pageCategory'] = array();
+//			foreach ( $_post_cats as $_one_cat ) {
+//				$dataLayer['pageCategory'][] = $_one_cat->slug;
+//			}
 		}
 
 		if ( ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_AUTHORID ] ) && ( is_author() ) ) {
@@ -318,11 +341,13 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 		}
 
 		if ( ( $gtm4wp_options[ GTM4WP_OPTION_INCLUDE_AUTHOR ] ) && ( is_author() ) ) {
-			$dataLayer['pagePostAuthor'] = get_the_author();
+			$dataLayer["author"] = get_the_author();
+//			$dataLayer['pagePostAuthor'] = get_the_author();
 		}
 	}
 
 	if ( is_search() ) {
+		$dataLayer['pagetype']          = 'searchresults';
 		$dataLayer['siteSearchTerm'] = get_search_query();
 		$dataLayer['siteSearchFrom'] = '';
 		if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
@@ -581,6 +606,39 @@ function gtm4wp_add_basic_datalayer_data( $dataLayer ) {
 			}
 		}
 	}
+
+	// Breadcrumb
+	ob_start();
+
+	if ( function_exists( 'yoast_breadcrumb' ) ) {
+		yoast_breadcrumb( '', '' );
+	}
+
+	$breadcrumb_full = strip_tags( ob_get_clean() );
+	$breadcrumb      = '';
+	if ( $breadcrumb_full ) {
+		$breadcrumb_parts = explode( ' » ', $breadcrumb_full );
+
+		array_pop( $breadcrumb_parts );
+		if ( count( $breadcrumb_parts ) ) {
+			$breadcrumb = implode( ' » ', $breadcrumb_parts );
+		}
+
+		$dataLayer['full_breadcrumb'] = $breadcrumb_full;
+
+		if ( ! empty( $breadcrumb ) ) {
+			$dataLayer['breadcrumb'] = $breadcrumb;
+		}
+	}
+
+	// remove unwanted
+	unset( $dataLayer['pagePostType2'] );
+	unset( $dataLayer['siteSearchTerm'] );
+	unset( $dataLayer['siteSearchFrom'] );
+	unset( $dataLayer['siteSearchResults'] );
+	unset( $dataLayer['pagePostDateYear'] );
+	unset( $dataLayer['pagePostDateMonth'] );
+	unset( $dataLayer['pagePostDateDay'] );
 
 	return $dataLayer;
 }

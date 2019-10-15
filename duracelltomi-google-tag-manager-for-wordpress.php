@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: Google Tag Manager for Wordpress
+Plugin Name: Fork of Google Tag Manager for Wordpress
 Version: 1.11
 Plugin URI: https://gtm4wp.com/
 Description: The first Google Tag Manager plugin for WordPress with business goals in mind
@@ -11,6 +11,7 @@ Domain Path: /languages
 
 WC requires at least: 2.6
 WC tested up to: 3.7
+GitHub Plugin URI: https://github.com/marcinkrzeminski/gtm4wp
 */
 
 define( 'GTM4WP_VERSION',    '1.11' );
